@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Bark Voice Notes</title>
+<style>
+  :root {
+    --bg: #16130f;
+    --card: #262119;
+    --ink: #f6f1e8;
+    --muted: #a89a88;
+    --line: rgba(246, 241, 232, 0.12);
+    --accent: #efab4a;
+    --accent-ink: #2a1c0a;
+    --clean: #8fd0b0;
+    --danger: #e57a6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.45 "Segoe UI", system-ui, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 20px 64px; }
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; }
+  .sub { margin: 4px 0 0; color: var(--muted); }
+  .pill {
+    margin: 4px 0 0;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #322b22;
+    color: var(--muted);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .pill.ready { color: var(--clean); }
+  .pill.warm { color: var(--accent); }
+  .pill.down { color: var(--danger); }
+  .talk-wrap { display: flex; flex-direction: column; align-items: center; margin: 36px 0 8px; }
+  .talk {
+    width: 168px;
+    height: 168px;
+    border: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 32%, #f6d7a1, #efab4a 46%, #c47d22);
+    color: var(--accent-ink);
+    font: 700 18px/1.2 inherit;
+    cursor: pointer;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    touch-action: none;
+    user-select: none;
+  }
+  .talk.rec { background: radial-gradient(circle at 40% 32%, #ffb1a6, #e15a4c 55%, #a33228); color: white; }
+  .talk:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .meter {
+    width: 168px;
+    height: 8px;
+    margin-top: 16px;
+    border-radius: 99px;
+    background: #3a3228;
+    overflow: hidden;
+  }
+  .meter span { display: block; height: 100%; width: 0; background: var(--accent); }
+  .clock { min-height: 1.4em; margin: 8px 0 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .hint { margin: 0; color: var(--muted); font-size: 14px; }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 22px;
+    margin: 22px 0;
+  }
+  .switch { display: inline-flex; padding: 3px; border-radius: 999px; background: #322b22; }
+  .switch button {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: 600 14px/1 inherit;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .switch button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); }
+  .compare { color: var(--muted); font-size: 14px; display: inline-flex; gap: 8px; align-items: center; }
+  .compare input { accent-color: var(--accent); width: 16px; height: 16px; }
+  .drop {
+    border: 1.5px dashed var(--line);
+    border-radius: 16px;
+    padding: 22px;
+    text-align: center;
+    color: var(--muted);
+    background: #1e1a15;
+  }
+  .drop.hot { border-color: var(--accent); color: var(--ink); }
+  .drop p { margin: 0 0 12px; }
+  .file-btn, .copy {
+    border: 0;
+    border-radius: 999px;
+    background: #3a3228;
+    color: var(--ink);
+    font: 600 14px/1 inherit;
+    padding: 10px 14px;
+    cursor: pointer;
+  }
+  .error {
+    margin: 16px 0 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(229, 122, 107, 0.15);
+    color: #ffc7c0;
+  }
+  .empty { color: var(--muted); margin-top: 22px; }
+  .group { margin-top: 14px; }
+  .file-name { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .group.one .cols { grid-template-columns: 1fr; }
+  .card { background: var(--card); border-radius: 16px; padding: 14px 14px 12px; }
+  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .badge {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(239, 171, 74, 0.18);
+    color: var(--accent);
+  }
+  .badge.clean { background: rgba(143, 208, 176, 0.16); color: var(--clean); }
+  .text { margin: 10px 0; white-space: pre-wrap; word-break: break-word; }
+  .text.wait { color: var(--muted); }
+  .meta { margin: 0; color: var(--muted); font-size: 13px; }
+  @media (max-width: 700px) {
+    .cols { grid-template-columns: 1fr; }
+    header { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Bark Voice Notes</h1>
+      <p class="sub">Offline on this Mac.</p>
+    </div>
+    <p id="status" class="pill">Checking…</p>
+  </header>
+
+  <div class="talk-wrap">
+    <button id="talk" class="talk" type="button" aria-pressed="false">Hold to talk</button>
+    <div class="meter" aria-hidden="true"><span id="level"></span></div>
+    <p id="clock" class="clock"></p>
+    <p class="hint">Hold the button or the space bar.</p>
+  </div>
+
+  <div class="controls">
+    <div class="switch" role="radiogroup" aria-label="Variant">
+      <button type="button" role="radio" data-variant="regular" aria-checked="true">Regular</button>
+      <button type="button" role="radio" data-variant="clean" aria-checked="false">Clean</button>
+    </div>
+    <label class="compare"><input id="both" type="checkbox"> Compare both</label>
+  </div>
+
+  <div id="drop" class="drop">
+    <p>Drop a wav, mp3, m4a, aiff, flac, or webm file</p>
+    <button id="choose" class="file-btn" type="button">Choose file</button>
+    <input id="file" type="file" accept=".wav,.mp3,.m4a,.aiff,.aif,.flac,.webm,audio/*" hidden>
+  </div>
+  <p id="error" class="error" hidden></p>
+  <p id="empty" class="empty">Recordings and files will show up here.</p>
+  <div id="list"></div>
+</main>
+<script>
+(function () {
+  var KEY = "bark-variant";
+  var MAX = 100 * 1024 * 1024;
+  var OK = /\.(wav|mp3|m4a|aiff|aif|flac|webm)$/i;
+  var talk = document.getElementById("talk");
+  var levelEl = document.getElementById("level");
+  var clockEl = document.getElementById("clock");
+  var statusEl = document.getElementById("status");
+  var errorEl = document.getElementById("error");
+  var listEl = document.getElementById("list");
+  var emptyEl = document.getElementById("empty");
+  var bothEl = document.getElementById("both");
+  var fileEl = document.getElementById("file");
+  var dropEl = document.getElementById("drop");
+  var switchBtns = document.querySelectorAll(".switch button");
+
+  var recording = false;
+  var arming = false;
+  var wantStop = false;
+  var holdPointer = false;
+  var holdKey = false;
+  var chunks = [];
+  var startedAt = 0;
+  var timer = 0;
+  var ctx = null;
+  var stream = null;
+  var source = null;
+  var node = null;
+  var sink = null;
+
+  function savedVariant() {
+    var v = localStorage.getItem(KEY);
+    return v === "clean" ? "clean" : "regular";
+  }
+
+  function setVariant(v) {
+    localStorage.setItem(KEY, v);
+    switchBtns.forEach(function (btn) {
+      btn.setAttribute("aria-checked", btn.getAttribute("data-variant") === v ? "true" : "false");
+    });
+  }
+
+  function chosenVariant() {
+    return bothEl.checked ? "both" : savedVariant();
+  }
+
+  function showError(text) {
+    if (!text) {
+      errorEl.hidden = true;
+      errorEl.textContent = "";
+      return;
+    }
+    errorEl.hidden = false;
+    errorEl.textContent = text;
+  }
+
+  function setStatus(mode, text) {
+    statusEl.className = "pill " + mode;
+    statusEl.textContent = text;
+  }
+
+  function refreshStatus() {
+    fetch("/api/status")
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        var loaded = data.loaded || [];
+        if (loaded.length) setStatus("ready", "Ready · " + loaded.join(", "));
+        else setStatus("warm", "Warming up");
+      })
+      .catch(function () { setStatus("down", "Server offline"); });
+  }
+
+  function labelOf(variant) {
+    return variant === "clean" ? "Clean" : "Regular";
+  }
+
+  function timingLine(result) {
+    var secs = Number(result.seconds) || 0;
+    var audio = Number(result.audio_seconds) || 0;
+    var load = Number(result.load_seconds) || 0;
+    var factor = secs > 0 ? Math.round(audio / secs) : 0;
+    var line = labelOf(result.variant) + " · " + secs.toFixed(2) + " s for " +
+      audio.toFixed(1) + " s of audio (" + factor + "x realtime)";
+    if (load > 0.05) line += " · model load " + load.toFixed(1) + " s";
+    return line;
+  }
+
+  function cardFor(result) {
+    var card = document.createElement("article");
+    card.className = "card";
+    var top = document.createElement("div");
+    top.className = "card-top";
+    var badge = document.createElement("span");
+    badge.className = "badge" + (result.variant === "clean" ? " clean" : "");
+    badge.textContent = labelOf(result.variant);
+    var copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "copy";
+    copy.textContent = "Copy";
+    copy.addEventListener("click", function () { copyText(result.text || "", copy); });
+    top.appendChild(badge);
+    top.appendChild(copy);
+    var text = document.createElement("p");
+    text.className = "text";
+    text.textContent = result.text ? result.text : "(no speech detected)";
+    var meta = document.createElement("p");
+    meta.className = "meta";
+    meta.textContent = timingLine(result);
+    card.appendChild(top);
+    card.appendChild(text);
+    card.appendChild(meta);
+    return card;
+  }
+
+  function copyText(text, button) {
+    var done = function () {
+      button.textContent = "Copied";
+      setTimeout(function () { button.textContent = "Copy"; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text); done(); });
+      return;
+    }
+    fallbackCopy(text);
+    done();
+  }
+
+  function fallbackCopy(text) {
+    var area = document.createElement("textarea");
+    area.value = text;
+    document.body.appendChild(area);
+    area.select();
+    document.execCommand("copy");
+    area.remove();
+  }
+
+  function fileLabel(name) {
+    return name === "recording.wav" ? "Microphone" : name;
+  }
+
+  function pendingGroup(filename) {
+    var group = document.createElement("div");
+    group.className = "group one";
+    var card = document.createElement("article");
+    card.className = "card";
+    var text = document.createElement("p");
+    text.className = "text wait";
+    text.textContent = "Transcribing " + fileLabel(filename) + "…";
+    card.appendChild(text);
+    group.appendChild(card);
+    listEl.prepend(group);
+    emptyEl.hidden = true;
+    return group;
+  }
+
+  function showResults(group, data) {
+    group.textContent = "";
+    var results = data.results || [];
+    group.className = results.length > 1 ? "group" : "group one";
+    var name = document.createElement("p");
+    name.className = "file-name";
+    name.textContent = fileLabel(data.filename || "audio");
+    var cols = document.createElement("div");
+    cols.className = "cols";
+    results.forEach(function (result) { cols.appendChild(cardFor(result)); });
+    group.appendChild(name);
+    group.appendChild(cols);
+  }
+
+  function sendBlob(blob, filename) {
+    if (blob.size > MAX) {
+      showError("That file is over 100 MB.");
+      return;
+    }
+    showError("");
+    var group = pendingGroup(filename);
+    var variant = chosenVariant();
+    fetch("/api/transcribe?variant=" + encodeURIComponent(variant), {
+      method: "POST",
+      headers: { "X-Filename": encodeURIComponent(filename || "audio") },
+      body: blob
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok || data.error) throw new Error(data.error || ("Request failed (" + res.status + ")"));
+        return data;
+      });
+    }).then(function (data) {
+      showResults(group, data);
+      refreshStatus();
+    }).catch(function (err) {
+      group.remove();
+      if (!listEl.children.length) emptyEl.hidden = false;
+      showError(err.message || "Something went wrong.");
+    });
+  }
+
+  function useFile(file) {
+    if (!file) return;
+    var type = file.type || "";
+    if (file.name && !OK.test(file.name) && type.indexOf("audio/") !== 0) {
+      showError("Use a wav, mp3, m4a, aiff, flac, or webm file.");
+      return;
+    }
+    sendBlob(file, file.name || "audio");
+  }
+
+  function concat(parts) {
+    var total = 0;
+    parts.forEach(function (p) { total += p.length; });
+    var out = new Float32Array(total);
+    var offset = 0;
+    parts.forEach(function (p) { out.set(p, offset); offset += p.length; });
+    return out;
+  }
+
+  function downsample(input, inRate, outRate) {
+    if (inRate === outRate) return input;
+    if (inRate < outRate || !input.length) return input;
+    var ratio = inRate / outRate;
+    var length = Math.floor(input.length / ratio);
+    var out = new Float32Array(length);
+    var i, start, end, sum, j, count;
+    for (i = 0; i < length; i++) {
+      start = Math.floor(i * ratio);
+      end = Math.min(Math.floor((i + 1) * ratio), input.length);
+      sum = 0;
+      count = 0;
+      for (j = start; j < end; j++) { sum += input[j]; count++; }
+      out[i] = count ? sum / count : 0;
+    }
+    return out;
+  }
+
+  function encodeWav(samples, rate) {
+    var buffer = new ArrayBuffer(44 + samples.length * 2);
+    var view = new DataView(buffer);
+    function write(offset, text) {
+      for (var i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+    }
+    write(0, "RIFF");
+    view.setUint32(4, 36 + samples.length * 2, true);
+    write(8, "WAVE");
+    write(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, rate, true);
+    view.setUint32(28, rate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    write(36, "data");
+    view.setUint32(40, samples.length * 2, true);
+    var offset = 44;
+    for (var i = 0; i < samples.length; i++) {
+      var s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      offset += 2;
+    }
+    return new Blob([buffer], { type: "audio/wav" });
+  }
+
+  function releaseAudio() {
+    if (node) {
+      node.onaudioprocess = null;
+      try { node.disconnect(); } catch (e) {}
+    }
+    if (source) try { source.disconnect(); } catch (e) {}
+    if (sink) try { sink.disconnect(); } catch (e) {}
+    if (stream) stream.getTracks().forEach(function (track) { track.stop(); });
+    var closing = ctx;
+    node = source = sink = stream = ctx = null;
+    if (closing) closing.close().catch(function () {});
+  }
+
+  function setIdle() {
+    talk.classList.remove("rec");
+    talk.textContent = "Hold to talk";
+    talk.setAttribute("aria-pressed", "false");
+    levelEl.style.width = "0";
+    clockEl.textContent = "";
+  }
+
+  function micMessage(err) {
+    var name = err && err.name;
+    if (name === "NotAllowedError" || name === "SecurityError" || name === "PermissionDeniedError") {
+      return "Click Allow when your browser asks for the microphone.";
+    }
+    if (name === "NotFoundError" || name === "OverconstrainedError") return "No microphone found.";
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return "This browser has no microphone access. Open the page from the Bark server.";
+    }
+    return "Microphone error. " + ((err && err.message) || "Try again.");
+  }
+
+  function endHold() {
+    if (holdPointer || holdKey) return;
+    if (recording) stopAndSend();
+    else wantStop = true;
+  }
+
+  function stopAndSend() {
+    var was = recording;
+    var rate = ctx ? ctx.sampleRate : 16000;
+    var local = chunks;
+    recording = false;
+    wantStop = true;
+    arming = false;
+    chunks = [];
+    if (timer) { clearInterval(timer); timer = 0; }
+    releaseAudio();
+    setIdle();
+    if (!was) return;
+    if (!local.length) {
+      showError("Hold a little longer, then release.");
+      return;
+    }
+    var down = downsample(concat(local), rate, 16000);
+    if (!down.length) {
+      showError("Hold a little longer, then release.");
+      return;
+    }
+    sendBlob(encodeWav(down, 16000), "recording.wav");
+  }
+
+  function startRec() {
+    if (recording || arming) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showError("This browser has no microphone access. Open the page from the Bark server.");
+      return;
+    }
+    arming = true;
+    wantStop = false;
+    showError("");
+    var context = new AudioContext();
+    ctx = context;
+    context.resume().then(function () {
+      if (wantStop || (!holdPointer && !holdKey)) {
+        releaseAudio();
+        arming = false;
+        return null;
+      }
+      return navigator.mediaDevices.getUserMedia({ audio: true });
+    }).then(function (mic) {
+      if (!mic || wantStop || (!holdPointer && !holdKey)) {
+        if (mic) mic.getTracks().forEach(function (track) { track.stop(); });
+        releaseAudio();
+        arming = false;
+        return;
+      }
+      stream = mic;
+      source = context.createMediaStreamSource(stream);
+      node = context.createScriptProcessor(4096, 1, 1);
+      sink = context.createGain();
+      sink.gain.value = 0;
+      chunks = [];
+      node.onaudioprocess = function (event) {
+        if (!recording) return;
+        var buf = event.inputBuffer;
+        var ch0 = buf.getChannelData(0);
+        var copy = new Float32Array(ch0.length);
+        var peak = 0;
+        var i, a;
+        if (buf.numberOfChannels > 1) {
+          var ch1 = buf.getChannelData(1);
+          for (i = 0; i < copy.length; i++) {
+            copy[i] = (ch0[i] + ch1[i]) * 0.5;
+            a = copy[i] < 0 ? -copy[i] : copy[i];
+            if (a > peak) peak = a;
+          }
+        } else {
+          copy.set(ch0);
+          for (i = 0; i < ch0.length; i++) {
+            a = ch0[i] < 0 ? -ch0[i] : ch0[i];
+            if (a > peak) peak = a;
+          }
+        }
+        chunks.push(copy);
+        levelEl.style.width = Math.min(100, Math.round(peak * 100)) + "%";
+      };
+      source.connect(node);
+      node.connect(sink);
+      sink.connect(context.destination);
+      recording = true;
+      arming = false;
+      startedAt = performance.now();
+      talk.classList.add("rec");
+      talk.textContent = "Release";
+      talk.setAttribute("aria-pressed", "true");
+      clockEl.textContent = "0.0 s";
+      timer = setInterval(function () {
+        clockEl.textContent = ((performance.now() - startedAt) / 1000).toFixed(1) + " s";
+      }, 100);
+    }).catch(function (err) {
+      releaseAudio();
+      recording = false;
+      arming = false;
+      setIdle();
+      showError(micMessage(err));
+    });
+  }
+
+  talk.addEventListener("pointerdown", function (event) {
+    if (event.button !== 0 && event.pointerType === "mouse") return;
+    event.preventDefault();
+    holdPointer = true;
+    startRec();
+  });
+  function releasePointer() {
+    if (!holdPointer) return;
+    holdPointer = false;
+    endHold();
+  }
+  talk.addEventListener("pointerup", releasePointer);
+  talk.addEventListener("pointerleave", releasePointer);
+  talk.addEventListener("pointercancel", releasePointer);
+  window.addEventListener("pointerup", releasePointer);
+  talk.addEventListener("contextmenu", function (event) { event.preventDefault(); });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.code !== "Space" || event.repeat || holdKey) return;
+    var tag = event.target && event.target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    event.preventDefault();
+    holdKey = true;
+    startRec();
+  });
+  document.addEventListener("keyup", function (event) {
+    if (event.code !== "Space" || !holdKey) return;
+    var tag = event.target && event.target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    event.preventDefault();
+    holdKey = false;
+    endHold();
+  });
+  window.addEventListener("blur", function () {
+    holdPointer = false;
+    holdKey = false;
+    if (recording) stopAndSend();
+    else if (arming) wantStop = true;
+  });
+
+  switchBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () { setVariant(btn.getAttribute("data-variant")); });
+  });
+  setVariant(savedVariant());
+
+  document.getElementById("choose").addEventListener("click", function () { fileEl.click(); });
+  fileEl.addEventListener("change", function () {
+    useFile(fileEl.files && fileEl.files[0]);
+    fileEl.value = "";
+  });
+  dropEl.addEventListener("click", function (event) {
+    if (event.target.closest("button, input, label")) return;
+    fileEl.click();
+  });
+  ["dragenter", "dragover"].forEach(function (name) {
+    dropEl.addEventListener(name, function (event) {
+      event.preventDefault();
+      dropEl.classList.add("hot");
+    });
+  });
+  dropEl.addEventListener("dragleave", function () { dropEl.classList.remove("hot"); });
+  dropEl.addEventListener("drop", function (event) {
+    event.preventDefault();
+    dropEl.classList.remove("hot");
+    var files = event.dataTransfer && event.dataTransfer.files;
+    useFile(files && files[0]);
+  });
+  window.addEventListener("dragover", function (event) { event.preventDefault(); });
+  window.addEventListener("drop", function (event) { event.preventDefault(); });
+
+  refreshStatus();
+  setInterval(refreshStatus, 5000);
+})();
+</script>
+</body>
+</html>

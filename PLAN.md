@@ -8,7 +8,7 @@ First load of each variant unpacks model.bark into an fp16 MLX cache folder ~/Mo
 
 ## Milestones
 - M1: `bark_engine.py` (load/cache/transcribe both variants, lazy, one at a time) + `transcribe_cli.py` (prints text + timing). Proven on a `say -o` clip.
-- M2: `server.py` (stdlib http.server or tiny dependency-free) on 127.0.0.1:8099, serves `web/index.html`; POST /api/transcribe?variant=regular|clean with audio body -> JSON {text, variant, seconds, audio_seconds}. Page: hold-to-talk mic (MediaRecorder -> WAV in browser), file drop, Regular/Clean switch, timing readout.
+- M2: written. `server.py` on 127.0.0.1, port from BARK_PORT (default 8099). GET / serves `web/index.html`; other GET paths serve files from `web/` (no traversal). GET /api/status -> {ok, loaded, variants}. POST /api/transcribe?variant=regular|clean|both with a raw audio body -> {results:[{variant, text, seconds, load_seconds, audio_seconds}], filename}.
 - M3: polish, README, `Start Bark Voice Notes.command` (starts server on demand, opens page; no LaunchAgent), stop instructions.
 
 ## Rules
