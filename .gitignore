@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.bark
+*.safetensors
+bark_mlx_*/
+.env
+*.env
+logs/
+*.wav
+*.webm
+*.m4a
+*.aiff
+!validation/*.png
