@@ -73,6 +73,12 @@ def _acquire(variant):
                 cache_dir=os.path.join(directory, "bark_mlx_fp16"),
             )
             load_seconds = time.perf_counter() - started
+            try:
+                import mlx.core as mx
+
+                mx.set_cache_limit(512 * 1024 * 1024)  # 16 GB Mac: cap the MLX buffer cache
+            except Exception:
+                pass
         _cache[variant] = (model, module)
         return model, module, load_seconds
 

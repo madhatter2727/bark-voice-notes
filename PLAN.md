@@ -7,9 +7,9 @@ Runtime: MLX via mlx-audio (Parakeet graph). Python 3.12 venv at <app>/.venv (ml
 First load of each variant unpacks model.bark into an fp16 MLX cache folder ~/Models/underdog-bark/<variant>/bark_mlx_fp16 (~6 GB RAM once, then cached).
 
 ## Milestones
-- M1: `bark_engine.py` (load/cache/transcribe both variants, lazy, one at a time) + `transcribe_cli.py` (prints text + timing). Proven on a `say -o` clip.
-- M2: written. `server.py` on 127.0.0.1, port from BARK_PORT (default 8099). GET / serves `web/index.html`; other GET paths serve files from `web/` (no traversal). GET /api/status -> {ok, loaded, variants}. POST /api/transcribe?variant=regular|clean|both with a raw audio body -> {results:[{variant, text, seconds, load_seconds, audio_seconds}], filename}.
-- M3: polish, README, `Start Bark Voice Notes.command` (starts server on demand, opens page; no LaunchAgent), stop instructions.
+- M1: done. `bark_engine.py` (load/cache/transcribe both variants, lazy, one at a time) + `transcribe_cli.py` (prints text + timing). Proven on a `say -o` clip.
+- M2: done. `server.py` on 127.0.0.1, port from BARK_PORT (default 8099). GET / serves `web/index.html`; other GET paths serve files from `web/` (no traversal). GET /api/status -> {ok, loaded, variants}. POST /api/transcribe?variant=regular|clean|both with a raw audio body -> {results:[{variant, text, seconds, load_seconds, audio_seconds}], filename}.
+- M3: written. Mic stays on "Starting mic…" until audio frames arrive, then "Listening…". MLX cache capped at 512 MB after each load. Idle thread unloads models after BARK_IDLE_MIN (default 15) with no transcription. POST /api/quit from 127.0.0.1, Stop link, `Start Bark Voice Notes.command`, `Stop Bark Voice Notes.command`, `setup.sh`, README. No LaunchAgent.
 
 ## Rules
 - NEVER call 127.0.0.1:7777, Osaurus, Ollama, LM Studio.

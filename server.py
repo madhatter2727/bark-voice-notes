@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -185,6 +186,53 @@ def warm():
     print("warmed regular", flush=True)
 
 
+_gate = threading.Lock()
+_last_transcribe = time.monotonic()
+
+
+def idle_limit_seconds():
+    raw = os.environ.get("BARK_IDLE_MIN", "").strip() or "15"
+    try:
+        minutes = float(raw)
+    except ValueError:
+        minutes = 15.0
+    if minutes < 0:
+        minutes = 15.0
+    return minutes * 60.0
+
+
+def _touch():
+    """Call only while holding _gate."""
+    global _last_transcribe
+    _last_transcribe = time.monotonic()
+
+
+def idle_unload_loop():
+    """Every 60s, drop cached models if nobody has transcribed for BARK_IDLE_MIN."""
+    limit = idle_limit_seconds()
+    while True:
+        time.sleep(60)
+        if not _gate.acquire(blocking=False):
+            continue
+        try:
+            idle_for = time.monotonic() - _last_transcribe
+            names = bark_engine.loaded()
+            if idle_for < limit or not names:
+                continue
+            for name in list(names):
+                bark_engine.unload(name)
+            print(
+                "unloaded "
+                + ", ".join(names)
+                + f" after {int(idle_for // 60)} min with no transcription",
+                flush=True,
+            )
+        except Exception as exc:
+            print("idle unload failed: " + str(exc).splitlines()[0][:300], flush=True)
+        finally:
+            _gate.release()
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "BarkVoiceNotes"
 
@@ -262,8 +310,31 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             self._fail(500, str(exc))
 
+    def _quit(self):
+        host = self.client_address[0]
+        if host not in ("127.0.0.1", "::1"):
+            self._json(403, {"error": "forbidden"})
+            return
+        raw_len = self.headers.get("Content-Length")
+        if raw_len:
+            try:
+                pending = int(raw_len)
+            except ValueError:
+                pending = 0
+            if 0 < pending <= 65536:
+                self.rfile.read(pending)
+        self._json(200, {"ok": True})
+        threading.Thread(target=_shutdown, args=(self.server,), name="bark-quit", daemon=True).start()
+
     def _post(self):
         path = urlparse(self.path)
+        origin = self.headers.get("Origin")
+        if origin and urlparse(origin).hostname not in ("127.0.0.1", "localhost"):
+            self._json(403, {"error": "forbidden origin"})
+            return
+        if path.path == "/api/quit":
+            self._quit()
+            return
         if path.path != "/api/transcribe":
             self._json(404, {"error": "not found"})
             return
@@ -280,8 +351,18 @@ class Handler(BaseHTTPRequestHandler):
         data = self.rfile.read(length)
         if len(data) != length:
             raise ClientError("incomplete audio upload")
-        results = transcribe_upload(data, filename, variants)
+        with _gate:
+            _touch()
+            try:
+                results = transcribe_upload(data, filename, variants)
+            finally:
+                _touch()
         self._json(200, {"results": results, "filename": filename})
+
+
+def _shutdown(httpd):
+    print("stopping", flush=True)
+    httpd.shutdown()
 
 
 def main():
@@ -297,6 +378,7 @@ def main():
         return 1
     httpd.daemon_threads = True
     threading.Thread(target=warm, name="bark-warm", daemon=True).start()
+    threading.Thread(target=idle_unload_loop, name="bark-idle", daemon=True).start()
     print(f"Bark Voice Notes listening on http://{HOST}:{port}/", flush=True)
     try:
         httpd.serve_forever()

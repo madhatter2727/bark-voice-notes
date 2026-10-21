@@ -55,8 +55,17 @@
     touch-action: none;
     user-select: none;
   }
-  .talk.rec { background: radial-gradient(circle at 40% 32%, #ffb1a6, #e15a4c 55%, #a33228); color: white; }
-  .talk:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .talk.starting { background: radial-gradient(circle at 40% 32%, #f6d7a1, #efab4a 46%, #c47d22); color: var(--accent-ink); }
+  .talk.rec {
+    background: radial-gradient(circle at 40% 32%, #ffb1a6, #e15a4c 55%, #a33228);
+    color: white;
+    animation: rec-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes rec-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(225, 90, 76, 0.45); }
+    50% { transform: scale(1.04); box-shadow: 0 0 0 14px rgba(225, 90, 76, 0); }
+  }
+  .talk:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .meter {
     width: 168px;
     height: 8px;
@@ -135,6 +144,10 @@
   .text { margin: 10px 0; white-space: pre-wrap; word-break: break-word; }
   .text.wait { color: var(--muted); }
   .meta { margin: 0; color: var(--muted); font-size: 13px; }
+  .foot { margin-top: 36px; color: var(--muted); font-size: 13px; }
+  .foot p { margin: 0 0 6px; }
+  .foot a { color: var(--muted); }
+  .stopped { margin-top: 48px; font-size: 18px; max-width: 36em; }
   @media (max-width: 700px) {
     .cols { grid-template-columns: 1fr; }
     header { flex-direction: column; }
@@ -174,6 +187,10 @@
   <p id="error" class="error" hidden></p>
   <p id="empty" class="empty">Recordings and files will show up here.</p>
   <div id="list"></div>
+  <footer class="foot">
+    <p>Runs offline on this Mac · Underdog Bark 3.0 (Regular) / Bark 3.0 Clean · server 127.0.0.1:8099</p>
+    <p><a href="#clear" id="clear">Clear</a> · <a href="#stop" id="stop">Stop server</a></p>
+  </footer>
 </main>
 <script>
 (function () {
@@ -193,8 +210,10 @@
   var switchBtns = document.querySelectorAll(".switch button");
 
   var recording = false;
+  var listening = false;
   var arming = false;
   var wantStop = false;
+  var stopped = false;
   var holdPointer = false;
   var holdKey = false;
   var chunks = [];
@@ -238,14 +257,16 @@
   }
 
   function refreshStatus() {
+    if (stopped) return;
     fetch("/api/status")
       .then(function (res) { return res.json(); })
       .then(function (data) {
+        if (stopped) return;
         var loaded = data.loaded || [];
         if (loaded.length) setStatus("ready", "Ready · " + loaded.join(", "));
         else setStatus("warm", "Warming up");
       })
-      .catch(function () { setStatus("down", "Server offline"); });
+      .catch(function () { if (!stopped) setStatus("down", "Server offline"); });
   }
 
   function labelOf(variant) {
@@ -451,11 +472,32 @@
   }
 
   function setIdle() {
-    talk.classList.remove("rec");
+    talk.classList.remove("rec", "starting");
     talk.textContent = "Hold to talk";
     talk.setAttribute("aria-pressed", "false");
     levelEl.style.width = "0";
     clockEl.textContent = "";
+  }
+
+  function setStarting() {
+    talk.classList.remove("rec");
+    talk.classList.add("starting");
+    talk.textContent = "Starting mic…";
+    talk.setAttribute("aria-pressed", "true");
+  }
+
+  function beginListening() {
+    listening = true;
+    talk.classList.remove("starting");
+    talk.classList.add("rec");
+    talk.textContent = "Listening…";
+    talk.setAttribute("aria-pressed", "true");
+    startedAt = performance.now();
+    clockEl.textContent = "0.0 s";
+    if (timer) clearInterval(timer);
+    timer = setInterval(function () {
+      clockEl.textContent = ((performance.now() - startedAt) / 1000).toFixed(1) + " s";
+    }, 100);
   }
 
   function micMessage(err) {
@@ -481,6 +523,7 @@
     var rate = ctx ? ctx.sampleRate : 16000;
     var local = chunks;
     recording = false;
+    listening = false;
     wantStop = true;
     arming = false;
     chunks = [];
@@ -507,14 +550,18 @@
       return;
     }
     arming = true;
+    listening = false;
     wantStop = false;
     showError("");
+    setStarting();
     var context = new AudioContext();
     ctx = context;
     context.resume().then(function () {
       if (wantStop || (!holdPointer && !holdKey)) {
         releaseAudio();
         arming = false;
+        listening = false;
+        setIdle();
         return null;
       }
       return navigator.mediaDevices.getUserMedia({ audio: true });
@@ -523,6 +570,8 @@
         if (mic) mic.getTracks().forEach(function (track) { track.stop(); });
         releaseAudio();
         arming = false;
+        listening = false;
+        setIdle();
         return;
       }
       stream = mic;
@@ -552,22 +601,19 @@
             if (a > peak) peak = a;
           }
         }
+        if (!listening) {
+          beginListening();
+          return;
+        }
         chunks.push(copy);
         levelEl.style.width = Math.min(100, Math.round(peak * 100)) + "%";
       };
+      recording = true;
+      arming = false;
+      listening = false;
       source.connect(node);
       node.connect(sink);
       sink.connect(context.destination);
-      recording = true;
-      arming = false;
-      startedAt = performance.now();
-      talk.classList.add("rec");
-      talk.textContent = "Release";
-      talk.setAttribute("aria-pressed", "true");
-      clockEl.textContent = "0.0 s";
-      timer = setInterval(function () {
-        clockEl.textContent = ((performance.now() - startedAt) / 1000).toFixed(1) + " s";
-      }, 100);
     }).catch(function (err) {
       releaseAudio();
       recording = false;
@@ -646,6 +692,44 @@
   });
   window.addEventListener("dragover", function (event) { event.preventDefault(); });
   window.addEventListener("drop", function (event) { event.preventDefault(); });
+
+  document.getElementById("clear").addEventListener("click", function (event) {
+    event.preventDefault();
+    listEl.textContent = "";
+    emptyEl.hidden = false;
+    showError("");
+  });
+  document.getElementById("stop").addEventListener("click", function (event) {
+    event.preventDefault();
+    if (stopped) return;
+    if (!confirm("Stop the Bark Voice Notes server?")) return;
+    fetch("/api/quit", { method: "POST" }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (res.ok && data.ok) showStopped();
+        else showError("Could not stop the server.");
+      });
+    }).catch(function () { showStopped(); });
+  });
+
+  function showStopped() {
+    stopped = true;
+    holdPointer = false;
+    holdKey = false;
+    if (recording || arming) {
+      recording = false;
+      listening = false;
+      arming = false;
+      wantStop = true;
+      if (timer) { clearInterval(timer); timer = 0; }
+      releaseAudio();
+    }
+    var main = document.querySelector("main");
+    main.textContent = "";
+    var note = document.createElement("p");
+    note.className = "stopped";
+    note.textContent = "Server stopped. Double-click Start Bark Voice Notes.command to start it again.";
+    main.appendChild(note);
+  }
 
   refreshStatus();
   setInterval(refreshStatus, 5000);
