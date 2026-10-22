@@ -18,14 +18,76 @@
     --danger: #e57a6b;
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
     margin: 0;
-    min-height: 100vh;
     background: var(--bg);
     color: var(--ink);
     font: 16px/1.45 "Segoe UI", system-ui, sans-serif;
+    overflow: hidden;
   }
-  main { max-width: 760px; margin: 0 auto; padding: 28px 20px 64px; }
+  .app { display: flex; height: 100vh; min-height: 0; }
+  .sidebar {
+    width: 300px;
+    flex: 0 0 300px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: #1c1814;
+    border-right: 1px solid var(--line);
+  }
+  .side-head { padding: 18px 14px 8px; }
+  .side-head h2 { margin: 0; font-size: 18px; letter-spacing: -0.02em; }
+  .search {
+    margin: 0 14px 10px;
+    width: calc(100% - 28px);
+    border: 0;
+    border-radius: 999px;
+    background: #322b22;
+    color: var(--ink);
+    font: 14px/1.2 inherit;
+    padding: 8px 12px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .search::placeholder { color: var(--muted); }
+  .history { flex: 1; min-height: 0; overflow: auto; }
+  .side-empty { margin: 4px 14px 12px; color: var(--muted); font-size: 14px; }
+  .row {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 10px 14px 11px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .row:hover { background: rgba(246, 241, 232, 0.04); }
+  .row[aria-selected="true"] {
+    background: rgba(239, 171, 74, 0.16);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .row .name, .row .preview {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .row .name { font-weight: 700; }
+  .row .when, .row .preview { color: var(--muted); font-size: 13px; }
+  .row .when { font-size: 12px; margin-top: 2px; }
+  .row .preview { margin-top: 2px; }
+  main {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+  }
+  .stage { max-width: 760px; margin: 0 auto; padding: 22px 24px 48px; }
   header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
   h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; }
   .sub { margin: 4px 0 0; color: var(--muted); }
@@ -41,17 +103,17 @@
   .pill.ready { color: var(--clean); }
   .pill.warm { color: var(--accent); }
   .pill.down { color: var(--danger); }
-  .talk-wrap { display: flex; flex-direction: column; align-items: center; margin: 36px 0 8px; }
+  .talk-wrap { display: flex; flex-direction: column; align-items: center; margin: 18px 0 4px; }
   .talk {
-    width: 168px;
-    height: 168px;
+    width: 132px;
+    height: 132px;
     border: 0;
     border-radius: 50%;
     background: radial-gradient(circle at 40% 32%, #f6d7a1, #efab4a 46%, #c47d22);
     color: var(--accent-ink);
-    font: 700 18px/1.2 inherit;
+    font: 700 15px/1.15 inherit;
     cursor: pointer;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
     touch-action: none;
     user-select: none;
   }
@@ -63,26 +125,30 @@
   }
   @keyframes rec-pulse {
     0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(225, 90, 76, 0.45); }
-    50% { transform: scale(1.04); box-shadow: 0 0 0 14px rgba(225, 90, 76, 0); }
+    50% { transform: scale(1.04); box-shadow: 0 0 0 12px rgba(225, 90, 76, 0); }
   }
-  .talk:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .talk:focus-visible, button:focus-visible, a:focus-visible, .search:focus-visible, .name-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
   .meter {
-    width: 168px;
+    width: 132px;
     height: 8px;
-    margin-top: 16px;
+    margin-top: 12px;
     border-radius: 99px;
     background: #3a3228;
     overflow: hidden;
   }
   .meter span { display: block; height: 100%; width: 0; background: var(--accent); }
   .clock { min-height: 1.4em; margin: 8px 0 0; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .hint { margin: 0; color: var(--muted); font-size: 14px; }
+  .hint, .pending { margin: 0; color: var(--muted); font-size: 14px; }
+  .pending { margin-top: 12px; }
   .controls {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 14px 22px;
-    margin: 22px 0;
+    margin: 16px 0;
   }
   .switch { display: inline-flex; padding: 3px; border-radius: 999px; background: #322b22; }
   .switch button {
@@ -100,7 +166,7 @@
   .drop {
     border: 1.5px dashed var(--line);
     border-radius: 16px;
-    padding: 22px;
+    padding: 16px;
     text-align: center;
     color: var(--muted);
     background: #1e1a15;
@@ -116,6 +182,7 @@
     padding: 10px 14px;
     cursor: pointer;
   }
+  button:disabled { opacity: 0.45; cursor: default; }
   .error {
     margin: 16px 0 0;
     padding: 10px 12px;
@@ -123,91 +190,177 @@
     background: rgba(229, 122, 107, 0.15);
     color: #ffc7c0;
   }
-  .empty { color: var(--muted); margin-top: 22px; }
-  .group { margin-top: 14px; }
-  .file-name { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
-  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .group.one .cols { grid-template-columns: 1fr; }
-  .card { background: var(--card); border-radius: 16px; padding: 14px 14px 12px; }
-  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .badge {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 999px;
-    background: rgba(239, 171, 74, 0.18);
-    color: var(--accent);
+  .detail { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .title-row { display: flex; align-items: flex-start; gap: 12px; }
+  .title-row h2 {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    word-break: break-word;
+    cursor: text;
   }
-  .badge.clean { background: rgba(143, 208, 176, 0.16); color: var(--clean); }
-  .text { margin: 10px 0; white-space: pre-wrap; word-break: break-word; }
+  .name-input {
+    flex: 1;
+    min-width: 0;
+    font: 600 22px/1.3 inherit;
+    color: var(--ink);
+    background: #322b22;
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 4px 8px;
+  }
+  .title-row .file-btn { flex: 0 0 auto; margin-top: 2px; }
+  audio { display: block; width: 100%; margin: 12px 0; }
+  .detail .switch { margin: 2px 0 12px; }
+  .card { background: var(--card); border-radius: 16px; padding: 14px 14px 12px; }
+  .card-top { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+  .text { margin: 10px 0; white-space: pre-wrap; word-break: break-word; user-select: text; }
   .text.wait { color: var(--muted); }
-  .meta { margin: 0; color: var(--muted); font-size: 13px; }
-  .foot { margin-top: 36px; color: var(--muted); font-size: 13px; }
+  .meta { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+  .delete {
+    margin-top: 14px;
+    border: 1px solid var(--danger);
+    background: transparent;
+    color: #ffc7c0;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font: 600 14px/1 inherit;
+    cursor: pointer;
+  }
+  .delete:hover { background: rgba(229, 122, 107, 0.12); }
+  #clip {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+  .foot { margin-top: 28px; color: var(--muted); font-size: 13px; }
   .foot p { margin: 0 0 6px; }
   .foot a { color: var(--muted); }
-  .stopped { margin-top: 48px; font-size: 18px; max-width: 36em; }
-  @media (max-width: 700px) {
-    .cols { grid-template-columns: 1fr; }
+  .stopped { margin: 48px 24px; font-size: 18px; max-width: 36em; }
+  @media (max-width: 800px) {
+    body { overflow: auto; }
+    .app { display: block; height: auto; }
+    .sidebar {
+      width: auto;
+      flex: none;
+      height: 42vh;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+    }
+    main { overflow: visible; }
     header { flex-direction: column; }
   }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <div>
-      <h1>Bark Voice Notes</h1>
-      <p class="sub">Offline on this Mac.</p>
+<div class="app">
+  <aside class="sidebar">
+    <div class="side-head"><h2>History</h2></div>
+    <input id="search" class="search" type="search" placeholder="Search" aria-label="Search recordings" autocomplete="off">
+    <div id="history" class="history" role="listbox" aria-label="Recordings">
+      <p class="side-empty">Loading…</p>
     </div>
-    <p id="status" class="pill">Checking…</p>
-  </header>
+  </aside>
+  <main>
+    <div class="stage">
+      <header>
+        <div>
+          <h1>Bark Voice Notes</h1>
+          <p class="sub">Offline on this Mac.</p>
+        </div>
+        <p id="status" class="pill">Checking…</p>
+      </header>
 
-  <div class="talk-wrap">
-    <button id="talk" class="talk" type="button" aria-pressed="false">Hold to talk</button>
-    <div class="meter" aria-hidden="true"><span id="level"></span></div>
-    <p id="clock" class="clock"></p>
-    <p class="hint">Hold the button or the space bar.</p>
-  </div>
+      <div class="talk-wrap">
+        <button id="talk" class="talk" type="button" aria-pressed="false">Hold to talk</button>
+        <div class="meter" aria-hidden="true"><span id="level"></span></div>
+        <p id="clock" class="clock"></p>
+        <p class="hint">Hold the button or the space bar.</p>
+      </div>
 
-  <div class="controls">
-    <div class="switch" role="radiogroup" aria-label="Variant">
-      <button type="button" role="radio" data-variant="regular" aria-checked="true">Regular</button>
-      <button type="button" role="radio" data-variant="clean" aria-checked="false">Clean</button>
+      <div class="controls">
+        <div id="rec-switch" class="switch" role="radiogroup" aria-label="Variant">
+          <button type="button" role="radio" data-variant="regular" aria-checked="true">Regular</button>
+          <button type="button" role="radio" data-variant="clean" aria-checked="false">Clean</button>
+        </div>
+        <label class="compare"><input id="both" type="checkbox"> Compare both</label>
+      </div>
+
+      <div id="drop" class="drop">
+        <p>Drop a wav, mp3, m4a, aiff, flac, or webm file</p>
+        <button id="choose" class="file-btn" type="button">Choose file</button>
+        <input id="file" type="file" accept=".wav,.mp3,.m4a,.aiff,.aif,.flac,.webm,audio/*" hidden>
+      </div>
+      <p id="error" class="error" hidden></p>
+      <p id="pending" class="pending" hidden></p>
+
+      <section id="detail" class="detail" hidden>
+        <div class="title-row">
+          <h2 id="rec-title"></h2>
+          <input id="rec-name" class="name-input" hidden maxlength="120" aria-label="Recording name" autocomplete="off" spellcheck="false">
+          <button id="rename" class="file-btn" type="button">Rename</button>
+        </div>
+        <p id="detail-meta" class="meta"></p>
+        <audio id="player" controls preload="metadata"></audio>
+        <div id="detail-switch" class="switch" role="radiogroup" aria-label="Transcript">
+          <button type="button" role="radio" data-variant="regular" aria-checked="true">Regular</button>
+          <button type="button" role="radio" data-variant="clean" aria-checked="false">Clean</button>
+        </div>
+        <article class="card">
+          <div class="card-top">
+            <button id="copy" class="copy" type="button" disabled>Copy</button>
+          </div>
+          <p id="transcript" class="text"></p>
+          <p id="timing" class="meta"></p>
+        </article>
+        <button id="delete-rec" class="delete" type="button">Delete</button>
+      </section>
+
+      <footer class="foot">
+        <p>Runs offline on this Mac · Underdog Bark 3.0 (Regular) / Bark 3.0 Clean · server 127.0.0.1:8099</p>
+        <p><a href="#clear" id="clear">Clear</a> · <a href="#stop" id="stop">Stop server</a></p>
+      </footer>
     </div>
-    <label class="compare"><input id="both" type="checkbox"> Compare both</label>
-  </div>
-
-  <div id="drop" class="drop">
-    <p>Drop a wav, mp3, m4a, aiff, flac, or webm file</p>
-    <button id="choose" class="file-btn" type="button">Choose file</button>
-    <input id="file" type="file" accept=".wav,.mp3,.m4a,.aiff,.aif,.flac,.webm,audio/*" hidden>
-  </div>
-  <p id="error" class="error" hidden></p>
-  <p id="empty" class="empty">Recordings and files will show up here.</p>
-  <div id="list"></div>
-  <footer class="foot">
-    <p>Runs offline on this Mac · Underdog Bark 3.0 (Regular) / Bark 3.0 Clean · server 127.0.0.1:8099</p>
-    <p><a href="#clear" id="clear">Clear</a> · <a href="#stop" id="stop">Stop server</a></p>
-  </footer>
-</main>
+  </main>
+</div>
+<textarea id="clip" aria-hidden="true" tabindex="-1"></textarea>
 <script>
 (function () {
   var KEY = "bark-variant";
+  var SEL_KEY = "bark-selected";
   var MAX = 100 * 1024 * 1024;
   var OK = /\.(wav|mp3|m4a|aiff|aif|flac|webm)$/i;
+  var MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
   var talk = document.getElementById("talk");
   var levelEl = document.getElementById("level");
   var clockEl = document.getElementById("clock");
   var statusEl = document.getElementById("status");
   var errorEl = document.getElementById("error");
-  var listEl = document.getElementById("list");
-  var emptyEl = document.getElementById("empty");
+  var pendingEl = document.getElementById("pending");
   var bothEl = document.getElementById("both");
   var fileEl = document.getElementById("file");
   var dropEl = document.getElementById("drop");
-  var switchBtns = document.querySelectorAll(".switch button");
+  var searchEl = document.getElementById("search");
+  var historyEl = document.getElementById("history");
+  var detailEl = document.getElementById("detail");
+  var titleEl = document.getElementById("rec-title");
+  var nameInput = document.getElementById("rec-name");
+  var renameBtn = document.getElementById("rename");
+  var metaEl = document.getElementById("detail-meta");
+  var player = document.getElementById("player");
+  var transcriptEl = document.getElementById("transcript");
+  var timingEl = document.getElementById("timing");
+  var copyBtn = document.getElementById("copy");
+  var deleteBtn = document.getElementById("delete-rec");
+  var clipEl = document.getElementById("clip");
+  var switchBtns = document.querySelectorAll("#rec-switch button");
 
   var recording = false;
   var listening = false;
@@ -225,6 +378,35 @@
   var node = null;
   var sink = null;
 
+  var rows = [];
+  var visibleRows = [];
+  var loadedOnce = false;
+  var listError = false;
+  var selectedId = "";
+  var detail = null;
+  var chosenDetailVariant = "regular";
+  var variantTouched = false;
+  var selectGen = 0;
+  var inflight = {};
+  var loads = {};
+  var copyValue = "";
+  var skipRename = false;
+  var renameLock = false;
+  var deleting = false;
+
+  function trim(text) {
+    return String(text || "").replace(/^\s+|\s+$/g, "");
+  }
+
+  function num(value) {
+    var n = Number(value);
+    return isFinite(n) ? n : 0;
+  }
+
+  function pad2(n) {
+    return (n < 10 ? "0" : "") + n;
+  }
+
   function savedVariant() {
     var v = localStorage.getItem(KEY);
     return v === "clean" ? "clean" : "regular";
@@ -239,6 +421,10 @@
 
   function chosenVariant() {
     return bothEl.checked ? "both" : savedVariant();
+  }
+
+  function labelOf(variant) {
+    return variant === "clean" ? "Clean" : "Regular";
   }
 
   function showError(text) {
@@ -269,127 +455,562 @@
       .catch(function () { if (!stopped) setStatus("down", "Server offline"); });
   }
 
-  function labelOf(variant) {
-    return variant === "clean" ? "Clean" : "Regular";
+  function readJson(res) {
+    return res.json().then(function (data) {
+      if (!res.ok || (data && data.error)) {
+        var err = new Error((data && data.error) || ("Request failed (" + res.status + ")"));
+        if (data && data.id) err.recordingId = data.id;
+        throw err;
+      }
+      return data;
+    }, function () {
+      throw new Error("Request failed (" + res.status + ")");
+    });
   }
 
-  function timingLine(result) {
-    var secs = Number(result.seconds) || 0;
-    var audio = Number(result.audio_seconds) || 0;
-    var load = Number(result.load_seconds) || 0;
+  function parseDate(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  }
+
+  function shortWhen(iso) {
+    var d = parseDate(iso);
+    if (!d) return "";
+    var hour = d.getHours();
+    var h12 = hour % 12 || 12;
+    var ampm = hour < 12 ? "AM" : "PM";
+    return MONTHS_SHORT[d.getMonth()] + " " + d.getDate() + ", " + h12 + ":" + pad2(d.getMinutes()) + " " + ampm;
+  }
+
+  function fullWhen(iso) {
+    var d = parseDate(iso);
+    if (!d) return "";
+    var hour = d.getHours();
+    var h12 = hour % 12 || 12;
+    var ampm = hour < 12 ? "AM" : "PM";
+    return MONTHS_LONG[d.getMonth()] + " " + d.getDate() + ", " + d.getFullYear() + ", " +
+      h12 + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds()) + " " + ampm;
+  }
+
+  function clockDuration(seconds) {
+    var total = Math.round(num(seconds));
+    if (total < 0) total = 0;
+    return Math.floor(total / 60) + ":" + pad2(total % 60);
+  }
+
+  function sourceLabel(meta) {
+    if (!meta || meta.source === "mic") return "Microphone";
+    if (meta.filename) return "File: " + meta.filename;
+    return "File";
+  }
+
+  function metaLine(meta) {
+    var parts = [];
+    var when = fullWhen(meta.created);
+    if (when) parts.push(when);
+    parts.push(clockDuration(meta.duration));
+    parts.push(sourceLabel(meta));
+    return parts.join(" · ");
+  }
+
+  function rowWhen(row) {
+    var when = shortWhen(row.created);
+    var len = clockDuration(row.duration);
+    return when ? (when + " · " + len) : len;
+  }
+
+  function timingLine(variant, seconds, audioSeconds, loadSeconds) {
+    var secs = num(seconds);
+    var audio = num(audioSeconds);
+    var load = num(loadSeconds);
     var factor = secs > 0 ? Math.round(audio / secs) : 0;
-    var line = labelOf(result.variant) + " · " + secs.toFixed(2) + " s for " +
+    var line = labelOf(variant) + " · " + secs.toFixed(2) + " s for " +
       audio.toFixed(1) + " s of audio (" + factor + "x realtime)";
     if (load > 0.05) line += " · model load " + load.toFixed(1) + " s";
     return line;
   }
 
-  function cardFor(result) {
-    var card = document.createElement("article");
-    card.className = "card";
-    var top = document.createElement("div");
-    top.className = "card-top";
-    var badge = document.createElement("span");
-    badge.className = "badge" + (result.variant === "clean" ? " clean" : "");
-    badge.textContent = labelOf(result.variant);
-    var copy = document.createElement("button");
-    copy.type = "button";
-    copy.className = "copy";
-    copy.textContent = "Copy";
-    copy.addEventListener("click", function () { copyText(result.text || "", copy); });
-    top.appendChild(badge);
-    top.appendChild(copy);
-    var text = document.createElement("p");
-    text.className = "text";
-    text.textContent = result.text ? result.text : "(no speech detected)";
-    var meta = document.createElement("p");
-    meta.className = "meta";
-    meta.textContent = timingLine(result);
-    card.appendChild(top);
-    card.appendChild(text);
-    card.appendChild(meta);
-    return card;
+  function hasVariant(obj, name) {
+    if (!obj) return false;
+    if (obj.transcripts) return !!obj.transcripts[name];
+    if (obj.variants && obj.variants.indexOf) return obj.variants.indexOf(name) !== -1;
+    return false;
+  }
+
+  function pickVariant(obj) {
+    var prefer = savedVariant();
+    if (hasVariant(obj, prefer)) return prefer;
+    if (hasVariant(obj, "regular")) return "regular";
+    if (hasVariant(obj, "clean")) return "clean";
+    return prefer;
+  }
+
+  function findRow(id) {
+    var i;
+    for (i = 0; i < rows.length; i++) if (rows[i].id === id) return rows[i];
+    return null;
+  }
+
+  function indexOfRow(id) {
+    var i;
+    for (i = 0; i < rows.length; i++) if (rows[i].id === id) return i;
+    return -1;
+  }
+
+  function rowById(id) {
+    var nodes = historyEl.querySelectorAll(".row");
+    var i;
+    for (i = 0; i < nodes.length; i++) {
+      if (nodes[i].getAttribute("data-id") === id) return nodes[i];
+    }
+    return null;
+  }
+
+  function sideNote(text) {
+    var p = document.createElement("p");
+    p.className = "side-empty";
+    p.textContent = text;
+    return p;
+  }
+
+  function renderList() {
+    var restore = historyEl.contains(document.activeElement);
+    var q = trim(searchEl.value).toLowerCase();
+    var i, row, name, preview;
+    visibleRows = [];
+    historyEl.textContent = "";
+    if (!loadedOnce) {
+      historyEl.appendChild(sideNote("Loading…"));
+      return;
+    }
+    if (listError && !rows.length) {
+      historyEl.appendChild(sideNote("Could not load history."));
+      return;
+    }
+    for (i = 0; i < rows.length; i++) {
+      row = rows[i];
+      name = (row.name || "").toLowerCase();
+      preview = (row.preview || "").toLowerCase();
+      if (!q || name.indexOf(q) !== -1 || preview.indexOf(q) !== -1) visibleRows.push(row);
+    }
+    if (!rows.length) {
+      historyEl.appendChild(sideNote("Your recordings will show up here."));
+      return;
+    }
+    if (!visibleRows.length) {
+      historyEl.appendChild(sideNote("No matches."));
+      return;
+    }
+    for (i = 0; i < visibleRows.length; i++) historyEl.appendChild(rowButton(visibleRows[i]));
+    if (restore) {
+      var again = rowById(selectedId);
+      if (again) {
+        again.focus();
+        if (again.scrollIntoView) again.scrollIntoView({ block: "nearest" });
+      }
+    }
+  }
+
+  function selectedIsVisible() {
+    var i;
+    for (i = 0; i < visibleRows.length; i++) if (visibleRows[i].id === selectedId) return true;
+    return false;
+  }
+
+  function rowButton(row) {
+    var btn = document.createElement("button");
+    var current = row.id === selectedId;
+    btn.type = "button";
+    btn.className = "row";
+    btn.setAttribute("role", "option");
+    btn.setAttribute("data-id", row.id);
+    btn.setAttribute("aria-selected", current ? "true" : "false");
+    btn.tabIndex = current || (!selectedIsVisible() && visibleRows[0] === row) ? 0 : -1;
+    var name = document.createElement("span");
+    name.className = "name";
+    name.textContent = row.name || "Recording";
+    var when = document.createElement("span");
+    when.className = "when";
+    when.textContent = rowWhen(row);
+    var preview = document.createElement("span");
+    preview.className = "preview";
+    preview.textContent = row.preview || "";
+    btn.appendChild(name);
+    btn.appendChild(when);
+    btn.appendChild(preview);
+    return btn;
+  }
+
+  function loadList() {
+    return fetch("/api/recordings").then(readJson).then(function (data) {
+      rows = data.recordings || [];
+      loadedOnce = true;
+      listError = false;
+      renderList();
+      return rows;
+    });
+  }
+
+  function storeSelected(id) {
+    try {
+      if (id) localStorage.setItem(SEL_KEY, id);
+      else localStorage.removeItem(SEL_KEY);
+    } catch (e) {}
+  }
+
+  function closeRename() {
+    if (nameInput.hidden) return;
+    if (document.activeElement === nameInput) skipRename = true;
+    nameInput.hidden = true;
+    titleEl.hidden = false;
+  }
+
+  function clearDetail() {
+    closeRename();
+    detail = null;
+    detailEl.hidden = true;
+    try { player.pause(); } catch (e) {}
+    player.removeAttribute("src");
+    player.removeAttribute("data-id");
+    try { player.load(); } catch (e2) {}
+    titleEl.textContent = "";
+    metaEl.textContent = "";
+    transcriptEl.textContent = "";
+    timingEl.textContent = "";
+    copyValue = "";
+  }
+
+  function syncAudio(id) {
+    if (player.getAttribute("data-id") === id) return;
+    player.setAttribute("data-id", id);
+    player.src = "/api/recordings/" + encodeURIComponent(id) + "/audio";
+  }
+
+  function setDetailChecks(variant) {
+    var buttons = document.querySelectorAll("#detail-switch button");
+    var i;
+    for (i = 0; i < buttons.length; i++) {
+      buttons[i].setAttribute("aria-checked", buttons[i].getAttribute("data-variant") === variant ? "true" : "false");
+    }
+  }
+
+  function showDetailSkeleton(id) {
+    var row = findRow(id);
+    detailEl.hidden = false;
+    closeRename();
+    titleEl.hidden = false;
+    titleEl.textContent = row ? (row.name || "Recording") : "Recording";
+    metaEl.textContent = "";
+    syncAudio(id);
+    transcriptEl.className = "text wait";
+    transcriptEl.textContent = "Loading…";
+    timingEl.textContent = "";
+    copyBtn.disabled = true;
+    renameBtn.disabled = true;
+    chosenDetailVariant = pickVariant(row);
+    setDetailChecks(chosenDetailVariant);
+  }
+
+  function showWaiting(variant) {
+    chosenDetailVariant = variant;
+    setDetailChecks(variant);
+    transcriptEl.className = "text wait";
+    transcriptEl.textContent = "Transcribing with " + labelOf(variant) + "…";
+    timingEl.textContent = "";
+    copyBtn.disabled = true;
+  }
+
+  function showEntry(meta, variant, entry) {
+    var text = entry && entry.text ? entry.text : "";
+    var load = loads[meta.id] ? loads[meta.id][variant] : 0;
+    chosenDetailVariant = variant;
+    setDetailChecks(variant);
+    transcriptEl.className = "text";
+    transcriptEl.textContent = text ? text : "(no speech detected)";
+    copyValue = text;
+    copyBtn.disabled = false;
+    copyBtn.textContent = "Copy";
+    timingEl.textContent = timingLine(variant, entry ? entry.seconds : 0, meta.duration, load);
+  }
+
+  function startTranscribe(meta, variant) {
+    var key = meta.id + "|" + variant;
+    if (inflight[key]) {
+      if (detail && detail.id === meta.id && chosenDetailVariant === variant) showWaiting(variant);
+      return;
+    }
+    inflight[key] = true;
+    showWaiting(variant);
+    fetch("/api/recordings/" + encodeURIComponent(meta.id) + "/transcribe?variant=" + encodeURIComponent(variant), {
+      method: "POST"
+    }).then(readJson).then(function (updated) {
+      delete inflight[key];
+      patchRow(updated);
+      refreshStatus();
+      if (!detail || detail.id !== updated.id) return;
+      detail = updated;
+      if (chosenDetailVariant !== variant) return;
+      var entry = updated.transcripts && updated.transcripts[variant];
+      if (entry) {
+        showError("");
+        showEntry(updated, variant, entry);
+      } else showError("No transcript returned.");
+    }).catch(function (err) {
+      delete inflight[key];
+      if (selectedId !== meta.id) return;
+      showError(err.message || "Could not transcribe.");
+      if (!detail || detail.id !== meta.id || chosenDetailVariant !== variant) return;
+      transcriptEl.className = "text wait";
+      transcriptEl.textContent = "No transcript yet.";
+      timingEl.textContent = "";
+      copyBtn.disabled = true;
+    });
+  }
+
+  function applyVariant(variant, fromUser) {
+    chosenDetailVariant = variant;
+    if (fromUser) variantTouched = true;
+    setDetailChecks(variant);
+    if (!detail || detail.id !== selectedId) return;
+    var entry = detail.transcripts && detail.transcripts[variant];
+    if (entry) showEntry(detail, variant, entry);
+    else startTranscribe(detail, variant);
+  }
+
+  function fillDetail(meta) {
+    detailEl.hidden = false;
+    closeRename();
+    titleEl.hidden = false;
+    titleEl.textContent = meta.name || "Recording";
+    metaEl.textContent = metaLine(meta);
+    syncAudio(meta.id);
+    renameBtn.disabled = false;
+    applyVariant(variantTouched ? chosenDetailVariant : pickVariant(meta), false);
+  }
+
+  function selectId(id) {
+    id = id || "";
+    if (!id) {
+      selectedId = "";
+      detail = null;
+      variantTouched = false;
+      storeSelected("");
+      renderList();
+      clearDetail();
+      return;
+    }
+    if (id === selectedId && detail && detail.id === id) {
+      renderList();
+      return;
+    }
+    selectedId = id;
+    detail = null;
+    variantTouched = false;
+    storeSelected(id);
+    renderList();
+    var gen = ++selectGen;
+    showDetailSkeleton(id);
+    fetch("/api/recordings/" + encodeURIComponent(id)).then(readJson).then(function (meta) {
+      if (gen !== selectGen) return;
+      detail = meta;
+      fillDetail(meta);
+    }).catch(function (err) {
+      if (gen !== selectGen) return;
+      clearDetail();
+      showError(err.message || "Could not open that recording.");
+    });
+  }
+
+  function previewOf(meta) {
+    var transcripts = meta.transcripts || {};
+    var text = "";
+    if (transcripts.clean && typeof transcripts.clean.text === "string") text = transcripts.clean.text;
+    else if (transcripts.regular && typeof transcripts.regular.text === "string") text = transcripts.regular.text;
+    var line = (text.split(/\r?\n/)[0] || "");
+    if (line.length > 140) line = line.slice(0, 140);
+    return line;
+  }
+
+  function patchRow(meta) {
+    var variants = [];
+    var transcripts = meta.transcripts || {};
+    var i;
+    if (transcripts.regular) variants.push("regular");
+    if (transcripts.clean) variants.push("clean");
+    for (i = 0; i < rows.length; i++) {
+      if (rows[i].id !== meta.id) continue;
+      rows[i].name = meta.name;
+      rows[i].duration = meta.duration;
+      rows[i].created = meta.created;
+      rows[i].source = meta.source;
+      rows[i].preview = previewOf(meta);
+      rows[i].variants = variants;
+      break;
+    }
+    renderList();
+  }
+
+  function openAfter(id) {
+    return loadList().then(function () {
+      if (id) selectId(id);
+    }).catch(function (err) {
+      showError(err.message || "Could not load history.");
+      if (id) selectId(id);
+    });
+  }
+
+  function startRename() {
+    if (!detail || detail.id !== selectedId) return;
+    if (!nameInput.hidden) {
+      nameInput.focus();
+      return;
+    }
+    skipRename = false;
+    nameInput.value = detail.name || "";
+    nameInput.hidden = false;
+    titleEl.hidden = true;
+    nameInput.focus();
+    nameInput.select();
+  }
+
+  function commitRename() {
+    if (nameInput.hidden || renameLock || !detail) return;
+    var editingId = detail.id;
+    var next = trim(nameInput.value);
+    if (next === detail.name) {
+      closeRename();
+      return;
+    }
+    if (!next || next.length > 120) {
+      showError("Name must be 1-120 characters.");
+      return;
+    }
+    renameLock = true;
+    fetch("/api/recordings/" + encodeURIComponent(editingId) + "/rename", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: next })
+    }).then(readJson).then(function (meta) {
+      renameLock = false;
+      patchRow(meta);
+      if (detail && detail.id === meta.id) detail = meta;
+      if (selectedId === editingId) {
+        titleEl.textContent = meta.name || "";
+        closeRename();
+        showError("");
+      }
+    }).catch(function (err) {
+      renameLock = false;
+      showError(err.message || "Could not rename.");
+    });
+  }
+
+  function currentName() {
+    if (detail && detail.id === selectedId && detail.name) return detail.name;
+    var row = findRow(selectedId);
+    return (row && row.name) || "Recording";
+  }
+
+  function removeSelected() {
+    if (deleting || !selectedId) return;
+    var id = selectedId;
+    var name = currentName();
+    var index = indexOfRow(id);
+    if (!confirm("Move \u201C" + name + "\u201D to the Trash?")) return;
+    deleting = true;
+    fetch("/api/recordings/" + encodeURIComponent(id) + "/delete", { method: "POST" })
+      .then(readJson)
+      .then(function () { return loadList(); })
+      .then(function () {
+        var next = rows[index] || (index > 0 ? rows[index - 1] : null);
+        detail = null;
+        selectedId = "";
+        selectId(next ? next.id : "");
+      })
+      .catch(function (err) {
+        showError(err.message || "Could not move that recording to the Trash.");
+      })
+      .then(function () { deleting = false; });
+  }
+
+  function moveSelection(delta) {
+    if (!visibleRows.length) return;
+    var idx = -1;
+    var next;
+    var i;
+    for (i = 0; i < visibleRows.length; i++) {
+      if (visibleRows[i].id === selectedId) idx = i;
+    }
+    next = idx + delta;
+    if (idx === -1) next = delta > 0 ? 0 : visibleRows.length - 1;
+    if (next < 0 || next >= visibleRows.length) return;
+    selectId(visibleRows[next].id);
   }
 
   function copyText(text, button) {
-    var done = function () {
+    var finish = function () {
       button.textContent = "Copied";
-      setTimeout(function () { button.textContent = "Copy"; }, 1200);
+      setTimeout(function () {
+        if (button.textContent === "Copied") button.textContent = "Copy";
+      }, 1200);
+    };
+    var fallback = function () {
+      var ok = false;
+      clipEl.value = text;
+      clipEl.focus();
+      clipEl.select();
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      clipEl.value = "";
+      if (document.activeElement === clipEl) button.focus();
+      if (!ok) showError("Could not copy.");
+      else finish();
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text); done(); });
+      navigator.clipboard.writeText(text).then(finish).catch(fallback);
       return;
     }
-    fallbackCopy(text);
-    done();
+    fallback();
   }
 
-  function fallbackCopy(text) {
-    var area = document.createElement("textarea");
-    area.value = text;
-    document.body.appendChild(area);
-    area.select();
-    document.execCommand("copy");
-    area.remove();
+  function rememberLoads(data) {
+    var rec = data && data.recording;
+    var bag, i, result;
+    if (!rec || !rec.id || !data.results) return;
+    bag = loads[rec.id] || {};
+    for (i = 0; i < data.results.length; i++) {
+      result = data.results[i];
+      if (!result || !result.variant) continue;
+      bag[result.variant] = num(result.load_seconds);
+    }
+    loads[rec.id] = bag;
   }
 
-  function fileLabel(name) {
-    return name === "recording.wav" ? "Microphone" : name;
-  }
-
-  function pendingGroup(filename) {
-    var group = document.createElement("div");
-    group.className = "group one";
-    var card = document.createElement("article");
-    card.className = "card";
-    var text = document.createElement("p");
-    text.className = "text wait";
-    text.textContent = "Transcribing " + fileLabel(filename) + "…";
-    card.appendChild(text);
-    group.appendChild(card);
-    listEl.prepend(group);
-    emptyEl.hidden = true;
-    return group;
-  }
-
-  function showResults(group, data) {
-    group.textContent = "";
-    var results = data.results || [];
-    group.className = results.length > 1 ? "group" : "group one";
-    var name = document.createElement("p");
-    name.className = "file-name";
-    name.textContent = fileLabel(data.filename || "audio");
-    var cols = document.createElement("div");
-    cols.className = "cols";
-    results.forEach(function (result) { cols.appendChild(cardFor(result)); });
-    group.appendChild(name);
-    group.appendChild(cols);
-  }
-
-  function sendBlob(blob, filename) {
+  function sendBlob(blob, filename, sourceKind) {
     if (blob.size > MAX) {
       showError("That file is over 100 MB.");
       return;
     }
     showError("");
-    var group = pendingGroup(filename);
-    var variant = chosenVariant();
-    fetch("/api/transcribe?variant=" + encodeURIComponent(variant), {
+    pendingEl.hidden = false;
+    pendingEl.textContent = "Transcribing " + (sourceKind === "mic" ? "Microphone" : (filename || "audio")) + "…";
+    fetch("/api/transcribe?variant=" + encodeURIComponent(chosenVariant()), {
       method: "POST",
-      headers: { "X-Filename": encodeURIComponent(filename || "audio") },
+      headers: {
+        "X-Source": sourceKind,
+        "X-Filename": encodeURIComponent(filename || "audio")
+      },
       body: blob
-    }).then(function (res) {
-      return res.json().then(function (data) {
-        if (!res.ok || data.error) throw new Error(data.error || ("Request failed (" + res.status + ")"));
-        return data;
-      });
-    }).then(function (data) {
-      showResults(group, data);
+    }).then(readJson).then(function (data) {
+      rememberLoads(data);
+      pendingEl.hidden = true;
       refreshStatus();
+      return openAfter(data.recording && data.recording.id);
     }).catch(function (err) {
-      group.remove();
-      if (!listEl.children.length) emptyEl.hidden = false;
+      pendingEl.hidden = true;
       showError(err.message || "Something went wrong.");
+      refreshStatus();
+      if (err && err.recordingId) openAfter(err.recordingId);
     });
   }
 
@@ -400,7 +1021,7 @@
       showError("Use a wav, mp3, m4a, aiff, flac, or webm file.");
       return;
     }
-    sendBlob(file, file.name || "audio");
+    sendBlob(file, file.name || "audio", "file");
   }
 
   function concat(parts) {
@@ -540,7 +1161,7 @@
       showError("Hold a little longer, then release.");
       return;
     }
-    sendBlob(encodeWav(down, 16000), "recording.wav");
+    sendBlob(encodeWav(down, 16000), "Recording.wav", "mic");
   }
 
   function startRec() {
@@ -623,6 +1244,12 @@
     });
   }
 
+  function typingTarget(event) {
+    var tag = event.target && event.target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "AUDIO" || tag === "VIDEO") return true;
+    return !!(event.target && event.target.isContentEditable);
+  }
+
   talk.addEventListener("pointerdown", function (event) {
     if (event.button !== 0 && event.pointerType === "mouse") return;
     event.preventDefault();
@@ -642,16 +1269,13 @@
 
   document.addEventListener("keydown", function (event) {
     if (event.code !== "Space" || event.repeat || holdKey) return;
-    var tag = event.target && event.target.tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if (typingTarget(event)) return;
     event.preventDefault();
     holdKey = true;
     startRec();
   });
   document.addEventListener("keyup", function (event) {
     if (event.code !== "Space" || !holdKey) return;
-    var tag = event.target && event.target.tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
     event.preventDefault();
     holdKey = false;
     endHold();
@@ -667,6 +1291,50 @@
     btn.addEventListener("click", function () { setVariant(btn.getAttribute("data-variant")); });
   });
   setVariant(savedVariant());
+
+  document.querySelectorAll("#detail-switch button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      applyVariant(btn.getAttribute("data-variant"), true);
+    });
+  });
+
+  searchEl.addEventListener("input", renderList);
+  historyEl.addEventListener("click", function (event) {
+    var node = event.target;
+    while (node && node !== historyEl && !node.getAttribute("data-id")) node = node.parentNode;
+    if (!node || node === historyEl) return;
+    selectId(node.getAttribute("data-id"));
+  });
+  historyEl.addEventListener("keydown", function (event) {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+    event.preventDefault();
+    moveSelection(event.key === "ArrowDown" ? 1 : -1);
+  });
+
+  titleEl.addEventListener("dblclick", startRename);
+  renameBtn.addEventListener("mousedown", function (event) {
+    if (!nameInput.hidden) event.preventDefault();
+  });
+  renameBtn.addEventListener("click", startRename);
+  nameInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitRename();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      showError("");
+      closeRename();
+    }
+  });
+  nameInput.addEventListener("blur", function () {
+    if (skipRename) {
+      skipRename = false;
+      return;
+    }
+    commitRename();
+  });
+  copyBtn.addEventListener("click", function () { copyText(copyValue || "", copyBtn); });
+  deleteBtn.addEventListener("click", removeSelected);
 
   document.getElementById("choose").addEventListener("click", function () { fileEl.click(); });
   fileEl.addEventListener("change", function () {
@@ -695,9 +1363,9 @@
 
   document.getElementById("clear").addEventListener("click", function (event) {
     event.preventDefault();
-    listEl.textContent = "";
-    emptyEl.hidden = false;
+    searchEl.value = "";
     showError("");
+    renderList();
   });
   document.getElementById("stop").addEventListener("click", function (event) {
     event.preventDefault();
@@ -723,16 +1391,33 @@
       if (timer) { clearInterval(timer); timer = 0; }
       releaseAudio();
     }
-    var main = document.querySelector("main");
-    main.textContent = "";
+    try { player.pause(); } catch (e) {}
+    document.body.textContent = "";
     var note = document.createElement("p");
     note.className = "stopped";
     note.textContent = "Server stopped. Double-click Start Bark Voice Notes.command to start it again.";
-    main.appendChild(note);
+    document.body.appendChild(note);
+  }
+
+  function restoreSelection() {
+    var saved = "";
+    var found = false;
+    try { saved = localStorage.getItem(SEL_KEY) || ""; } catch (e) {}
+    rows.forEach(function (row) { if (row.id === saved) found = true; });
+    if (found) selectId(saved);
+    else if (rows.length) selectId(rows[0].id);
+    else selectId("");
   }
 
   refreshStatus();
   setInterval(refreshStatus, 5000);
+  loadList().then(restoreSelection).catch(function (err) {
+    loadedOnce = true;
+    listError = true;
+    rows = [];
+    renderList();
+    showError(err.message || "Could not load history.");
+  });
 })();
 </script>
 </body>
