@@ -11,3 +11,5 @@ logs/
 *.m4a
 *.aiff
 !validation/*.png
+.build/
+mac/.build/

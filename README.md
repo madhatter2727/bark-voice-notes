@@ -2,12 +2,34 @@
 
 Offline speech-to-text for this Mac. Hold the button, talk, and the text shows up on the page. Audio stays on the machine.
 
+## Mac app
+
+Open **Bark Voice Notes** from `~/Applications` or Spotlight.
+
+The first time you hold the talk button, macOS asks for the microphone. Click Allow. It asks once.
+
+Quit the app to stop the server and the models. Nothing starts at login.
+
+Recordings are stored in `~/Library/Application Support/Bark Voice Notes/recordings`. Deleted recordings go to the Trash.
+
+Install or update the app from this folder:
+
+```bash
+mac/install-app.sh
+```
+
+`mac/install-app.sh --open` installs it and opens it.
+
+## Browser
+
+The `.command` scripts are the browser option. They use the same local server.
+
 Two local models:
 
 - **Regular** is Underdog Bark 3.0. It writes what you said, including “um” and “uh”.
 - **Clean** is Underdog Bark 3.0 Clean. It drops those filler words.
 
-## Open it
+## Open it in a browser
 
 Double-click `Start Bark Voice Notes.command`.
 
@@ -28,6 +50,10 @@ The first load after a model has been unpacked takes about 0.4–0.8 s. With bot
 
 ## Stop
 
+Quit the Mac app if that is what you opened. That stops the server and the models.
+
+From the browser:
+
 - Click **Stop server** at the bottom of the page.
 - Or double-click `Stop Bark Voice Notes.command`.
 - Or in Terminal: `kill $(lsof -tiTCP:8099 -sTCP:LISTEN)`
@@ -42,7 +68,8 @@ The first time a model is unpacked, memory can peak around 6.5 GB, once. After t
 
 ## Files
 
-- `Start Bark Voice Notes.command` — start the server if needed, then open the page
+- `mac/install-app.sh` — build the Mac app into `~/Applications`
+- `Start Bark Voice Notes.command` — start the server if needed, then open the page in a browser
 - `Stop Bark Voice Notes.command` — stop it
 - `setup.sh` — create `.venv` (Python 3.12), install the pinned packages, download both models
 - `server.py` — the page and the API, on 127.0.0.1 port 8099 (`BARK_PORT` to change the port)
@@ -66,7 +93,7 @@ You need `uv` and the Hugging Face `hf` command.
 ./setup.sh
 ```
 
-Then double-click `Start Bark Voice Notes.command`.
+Then double-click `Start Bark Voice Notes.command`, or install the Mac app with `mac/install-app.sh`.
 
 ## Page test
 

@@ -549,6 +549,7 @@ def _trash_with_helper(helper, folder):
         raise RuntimeError("trash helper timed out") from exc
     if proc.returncode != 0:
         raise RuntimeError("trash helper failed")
+    print("moved to Trash: " + proc.stdout.decode("utf-8", "replace").strip(), flush=True)
 
 
 def _trash_with_move(folder, meta):

@@ -323,7 +323,7 @@
 
       <footer class="foot">
         <p>Runs offline on this Mac · Underdog Bark 3.0 (Regular) / Bark 3.0 Clean · server 127.0.0.1:8099</p>
-        <p><a href="#clear" id="clear">Clear</a> · <a href="#stop" id="stop">Stop server</a></p>
+        <p><a href="#clear" id="clear">Clear search</a><span id="stop-wrap"> · <a href="#stop" id="stop">Stop server</a></span></p>
       </footer>
     </div>
   </main>
@@ -1367,6 +1367,10 @@
     showError("");
     renderList();
   });
+  if (navigator.userAgent.indexOf("BarkVoiceNotesApp") !== -1) {
+    // In the Mac app, quitting the app stops the server; hide the browser-only Stop link.
+    document.getElementById("stop-wrap").hidden = true;
+  }
   document.getElementById("stop").addEventListener("click", function (event) {
     event.preventDefault();
     if (stopped) return;
